@@ -7,7 +7,7 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
-const { User } = require('../models');
+const User = require('../models/User');
 const { ROLES } = require('../config/constants');
 
 const seedUsers = [

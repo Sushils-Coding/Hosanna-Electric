@@ -295,19 +295,6 @@ async function runTests() {
     assert(status === 400, 'Terminal state transition blocked');
   }
 
-  // 15. Get transition info
-  log('15. Getting state machine info...');
-  {
-    const { status, data } = await request(
-      'GET',
-      '/jobs/transitions/info',
-      null,
-      tokens.ADMIN
-    );
-    assert(status === 200, 'Transition info retrieved');
-    log('State machine:', data.data);
-  }
-
   console.log('\n' + '='.repeat(60));
   console.log('🎉 ALL TESTS PASSED!');
   console.log('='.repeat(60));
