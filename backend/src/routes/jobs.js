@@ -17,8 +17,33 @@ router.get('/', async (req, res) => {
 
     if (req.user.role === ROLES.TECHNICIAN) {
       filter.assignedTechnician = req.user._id;
+      // Technicians only see jobs that have been dispatched to them by the manager
+      const techVisibleStatuses = [
+        JOB_STATUS.DISPATCHED,
+        JOB_STATUS.IN_PROGRESS,
+        JOB_STATUS.COMPLETED,
+        JOB_STATUS.BILLED,
+      ];
+      filter.status = status
+        ? (techVisibleStatuses.includes(status) ? status : '__none__')
+        : { $in: techVisibleStatuses };
+    } else if (req.user.role === ROLES.OFFICE_MANAGER) {
+      // Managers see everything except TENTATIVE
+      const managerVisibleStatuses = [
+        JOB_STATUS.CONFIRMED,
+        JOB_STATUS.ASSIGNED,
+        JOB_STATUS.DISPATCHED,
+        JOB_STATUS.IN_PROGRESS,
+        JOB_STATUS.COMPLETED,
+        JOB_STATUS.BILLED,
+      ];
+      filter.status = status
+        ? (managerVisibleStatuses.includes(status) ? status : '__none__')
+        : { $in: managerVisibleStatuses };
+    } else {
+      // ADMIN sees everything
+      if (status) filter.status = status;
     }
-    if (status) filter.status = status;
     if (assignedTechnician && req.user.role !== ROLES.TECHNICIAN) {
       filter.assignedTechnician = assignedTechnician;
     }
@@ -59,6 +84,11 @@ router.get('/:id', async (req, res) => {
 
     if (!job) return res.status(404).json({ success: false, error: 'Job not found' });
 
+    // TENTATIVE jobs are only visible to ADMIN
+    if (job.status === JOB_STATUS.TENTATIVE && req.user.role !== ROLES.ADMIN) {
+      return res.status(403).json({ success: false, error: 'Not authorized to view this job' });
+    }
+
     if (
       req.user.role === ROLES.TECHNICIAN &&
       job.assignedTechnician?._id.toString() !== req.user._id.toString()
@@ -80,7 +110,13 @@ router.post(
     body('title').notEmpty().withMessage('Job title is required'),
     body('customerName').notEmpty().withMessage('Customer name is required'),
     body('customerEmail').optional().isEmail().withMessage('Invalid customer email'),
-    body('scheduledDate').optional().isISO8601().withMessage('Invalid date format'),
+    body('scheduledDate').optional().isISO8601().withMessage('Invalid date format')
+      .custom((value) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (new Date(value) < today) throw new Error('Scheduled date cannot be in the past');
+        return true;
+      }),
     body('estimatedCost').optional().isFloat({ min: 0 }).withMessage('Must be a positive number'),
   ],
   async (req, res) => {
@@ -172,7 +208,13 @@ router.put(
   [
     body('title').optional().notEmpty().withMessage('Title cannot be empty'),
     body('customerEmail').optional().isEmail().withMessage('Invalid customer email'),
-    body('scheduledDate').optional().isISO8601().withMessage('Invalid date format'),
+    body('scheduledDate').optional().isISO8601().withMessage('Invalid date format')
+      .custom((value) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (new Date(value) < today) throw new Error('Scheduled date cannot be in the past');
+        return true;
+      }),
     body('estimatedCost').optional().isFloat({ min: 0 }).withMessage('Must be positive'),
     body('actualCost').optional().isFloat({ min: 0 }).withMessage('Must be positive'),
   ],

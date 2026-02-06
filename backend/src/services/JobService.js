@@ -94,6 +94,11 @@ async function transitionStatus(jobId, newStatus, user, notes) {
   const err = validateTransition(currentStatus, newStatus, user.role);
   if (err) return { error: err, status: 400 };
 
+  // 2b) Manager must provide notes when dispatching
+  if (newStatus === JOB_STATUS.DISPATCHED && (!notes || !notes.trim())) {
+    return { error: 'Notes are required when dispatching a job to a technician', status: 400 };
+  }
+
   // 3) Technician must be the one assigned
   if (user.role === ROLES.TECHNICIAN) {
     if (!job.assignedTechnician || job.assignedTechnician.toString() !== user._id.toString()) {
