@@ -66,19 +66,19 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right Panel — Login Form ── */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white px-6 py-6 overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white px-4 sm:px-6 py-6 overflow-y-auto">
         <div className="w-full max-w-md">
           {/* Logo (mobile) + branding */}
-          <div className="mb-5">
+          <div className="mb-4 sm:mb-5">
             <img
               src="/Hosanna-logo.webp"
               alt="Hosanna Electric"
-              className="h-14 mb-4"
+              className="h-12 sm:h-14 mb-3 sm:mb-4"
             />
-            <h1 className="text-3xl font-bold text-hosanna-black">
+            <h1 className="text-2xl sm:text-3xl font-bold text-hosanna-black">
               Welcome back
             </h1>
-            <p className="text-hosanna-gray mt-2">
+            <p className="text-sm text-hosanna-gray mt-1 sm:mt-2">
               Enter your credentials to access your portal.
             </p>
           </div>

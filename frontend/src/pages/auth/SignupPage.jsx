@@ -76,19 +76,19 @@ export default function SignupPage() {
       </div>
 
       {/* ── Right Panel — Signup Form ── */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white px-6 py-4 overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-center justify-center bg-white px-4 sm:px-6 py-4 overflow-y-auto">
         <div className="w-full max-w-md">
           {/* Logo + heading */}
-          <div className="mb-4">
+          <div className="mb-3 sm:mb-4">
             <img
               src="/Hosanna-logo.webp"
               alt="Hosanna Electric"
-              className="h-12 mb-3"
+              className="h-10 sm:h-12 mb-2 sm:mb-3"
             />
-            <h1 className="text-3xl font-bold text-hosanna-black">
+            <h1 className="text-2xl sm:text-3xl font-bold text-hosanna-black">
               Create an account
             </h1>
-            <p className="text-hosanna-gray mt-2">
+            <p className="text-sm text-hosanna-gray mt-1 sm:mt-2">
               Join Hosanna Electric&apos;s field service portal.
             </p>
           </div>
@@ -163,58 +163,61 @@ export default function SignupPage() {
               </select>
             </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-hosanna-black mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-hosanna-gray" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Min. 6 characters"
-                  autoComplete="off"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  className="w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg text-sm
-                             text-hosanna-black placeholder-gray-400
-                             focus:outline-none focus:ring-2 focus:ring-hosanna-red/30 focus:border-hosanna-red
-                             transition-all duration-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-hosanna-gray hover:text-hosanna-black transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            {/* Password + Confirm Password row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-medium text-hosanna-black mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-hosanna-gray" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Min. 6 characters"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                    className="w-full pl-10 pr-12 py-2.5 border border-gray-300 rounded-lg text-sm
+                               text-hosanna-black placeholder-gray-400
+                               focus:outline-none focus:ring-2 focus:ring-hosanna-red/30 focus:border-hosanna-red
+                               transition-all duration-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-hosanna-gray hover:text-hosanna-black transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium text-hosanna-black mb-1">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-hosanna-gray" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  value={form.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Re-enter your password"
-                  autoComplete="off"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm
-                             text-hosanna-black placeholder-gray-400
-                             focus:outline-none focus:ring-2 focus:ring-hosanna-red/30 focus:border-hosanna-red
-                             transition-all duration-200"
-                />
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-hosanna-black mb-1">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-hosanna-gray" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Re-enter your password"
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm
+                               text-hosanna-black placeholder-gray-400
+                               focus:outline-none focus:ring-2 focus:ring-hosanna-red/30 focus:border-hosanna-red
+                               transition-all duration-200"
+                  />
+                </div>
               </div>
             </div>
 

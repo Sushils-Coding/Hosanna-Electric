@@ -56,10 +56,8 @@ const jobSchema = new mongoose.Schema(
       trim: true,
     },
     address: {
-      street: String,
-      city: String,
-      state: String,
-      zipCode: String,
+      type: String,
+      trim: true,
     },
     scheduledDate: {
       type: Date,

@@ -40,6 +40,18 @@ const jobService = {
     return data;
   },
 
+  /** Delete a job (ADMIN only) */
+  async deleteJob(id) {
+    const { data } = await api.delete(`/jobs/${id}`);
+    return data;
+  },
+
+  /** Reassign technician (ADMIN only) — resets job to ASSIGNED */
+  async reassignTechnician(id, technicianId, notes) {
+    const { data } = await api.patch(`/jobs/${id}/reassign`, { technicianId, notes });
+    return data;
+  },
+
   /** Get job status history */
   async getHistory(id) {
     const { data } = await api.get(`/jobs/${id}/history`);
