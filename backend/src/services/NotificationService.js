@@ -1,6 +1,7 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 const { ROLES } = require('../config/constants');
+const { emitToUsers } = require('../socket');
 
 /**
  * Create notification(s) for relevant users.
@@ -46,6 +47,14 @@ async function createNotification({ type, message, jobId, recipientIds, recipien
     }));
 
     await Notification.insertMany(docs);
+
+    // Emit real-time socket event to recipients
+    emitToUsers({
+      event: 'notification',
+      data: { type, message, jobId },
+      recipientIds: recipients,
+      excludeUserId,
+    });
   } catch (error) {
     console.error('Failed to create notifications:', error.message);
     // Non-blocking — don't throw

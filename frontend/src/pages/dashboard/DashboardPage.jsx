@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { useNotification } from '../../components/Notification';
 import jobService from '../../services/jobService';
 import JobDetailPanel from '../../components/jobs/JobDetailPanel';
@@ -23,6 +24,7 @@ const STATUS_CONFIG = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const socket = useSocket();
   const { showNotification } = useNotification();
   const navigate = useNavigate();
 
@@ -50,17 +52,21 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
-  // Auto-poll
-  const pollRef = useRef(null);
-  useEffect(() => {
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await jobService.getJobs({ page: 1, limit: 100 });
-        setJobs(res.data);
-      } catch { /* silent */ }
-    }, 15000);
-    return () => clearInterval(pollRef.current);
+  // Silent background refresh (no loading spinner)
+  const silentRefresh = useCallback(async () => {
+    try {
+      const res = await jobService.getJobs({ page: 1, limit: 100 });
+      setJobs(res.data);
+    } catch { /* silent */ }
   }, []);
+
+  // Listen for real-time job updates
+  useEffect(() => {
+    if (!socket) return;
+    const handler = () => silentRefresh();
+    socket.on('jobs:updated', handler);
+    return () => socket.off('jobs:updated', handler);
+  }, [socket, silentRefresh]);
 
   // Refresh selected job after status change
   const handleStatusChanged = () => {

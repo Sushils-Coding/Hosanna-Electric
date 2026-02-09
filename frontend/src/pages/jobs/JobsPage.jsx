@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { useNotification } from '../../components/Notification';
 import jobService from '../../services/jobService';
 import {
@@ -26,6 +27,7 @@ const ALL_STATUSES = ['TENTATIVE', 'CONFIRMED', 'ASSIGNED', 'DISPATCHED', 'IN_PR
 
 export default function JobsPage() {
   const { user } = useAuth();
+  const socket = useSocket();
   const { showNotification } = useNotification();
 
   // ── State ──
@@ -69,12 +71,13 @@ export default function JobsPage() {
 
   useEffect(() => { fetchJobs(); }, [fetchJobs]);
 
-  // Auto-polling every 15s
-  const pollRef = useRef(null);
+  // Listen for real-time job updates
   useEffect(() => {
-    pollRef.current = setInterval(silentRefresh, 15000);
-    return () => clearInterval(pollRef.current);
-  }, [silentRefresh]);
+    if (!socket) return;
+    const handler = () => silentRefresh();
+    socket.on('jobs:updated', handler);
+    return () => socket.off('jobs:updated', handler);
+  }, [socket, silentRefresh]);
 
   // ── Client-side search filter ──
   const filteredJobs = searchTerm

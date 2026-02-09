@@ -5,8 +5,14 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES, JOB_STATUS } = require('../config/constants');
 const JobService = require('../services/JobService');
 const { createNotification } = require('../services/NotificationService');
+const { getIO } = require('../socket');
 
 const router = express.Router();
+
+function broadcastJobUpdate() {
+  const io = getIO();
+  if (io) io.emit('jobs:updated');
+}
 
 router.use(authenticate);
 
@@ -141,12 +147,13 @@ router.post(
       // Notify other admins only (new jobs are TENTATIVE, managers can't see them)
       createNotification({
         type: 'JOB_CREATED',
-        message: `New job created: "${job.title}" for ${job.customerName}`,
+        message: `New job created by ${req.user.name}: "${job.title}" for ${job.customerName}`,
         jobId: job._id,
         recipientRoles: [ROLES.ADMIN],
         excludeUserId: req.user._id,
       });
 
+      broadcastJobUpdate();
       res.status(201).json({ success: true, data: job });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -212,13 +219,14 @@ router.patch(
 
       createNotification({
         type: `JOB_${req.body.status === 'IN_PROGRESS' ? 'STARTED' : req.body.status}`,
-        message: STATUS_MESSAGES[req.body.status] || `Job "${job.title}" status updated`,
+        message: `${STATUS_MESSAGES[req.body.status] || `Job "${job.title}" status updated`} by ${req.user.name}`,
         jobId: job._id,
         recipientIds: notifRecipientIds,
         recipientRoles: notifRoles,
         excludeUserId: req.user._id,
       });
 
+      broadcastJobUpdate();
       res.json({ success: true, data: result.data, message: `Status updated to ${req.body.status}` });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -256,12 +264,13 @@ router.patch(
       const assignedJob = result.data;
       createNotification({
         type: 'JOB_ASSIGNED',
-        message: `Job "${assignedJob.title}" has been assigned to ${assignedJob.assignedTechnician?.name || 'a technician'}`,
+        message: `Job "${assignedJob.title}" has been assigned to ${assignedJob.assignedTechnician?.name || 'a technician'} by ${req.user.name}`,
         jobId: assignedJob._id,
         recipientRoles: [ROLES.OFFICE_MANAGER],
         excludeUserId: req.user._id,
       });
 
+      broadcastJobUpdate();
       res.json({ success: true, data: result.data, message: 'Technician assigned' });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -324,12 +333,13 @@ router.patch(
       // Notify managers only — technician will be notified when dispatched
       createNotification({
         type: 'JOB_REASSIGNED',
-        message: `Job "${job.title}" reassigned from ${oldTechName} to ${newTechName}`,
+        message: `Job "${job.title}" reassigned from ${oldTechName} to ${newTechName} by ${req.user.name}`,
         jobId: job._id,
         recipientRoles: [ROLES.OFFICE_MANAGER],
         excludeUserId: req.user._id,
       });
 
+      broadcastJobUpdate();
       res.json({ success: true, data: job, message: `Reassigned to ${newTechName}` });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -377,7 +387,7 @@ router.delete(
       if (notifRecipientIds.length > 0 || notifRoles.length > 0) {
         createNotification({
           type: 'JOB_DELETED',
-          message: `Job "${jobTitle}" has been deleted`,
+          message: `Job "${jobTitle}" has been deleted by ${req.user.name}`,
           jobId: null,
           recipientIds: notifRecipientIds,
           recipientRoles: notifRoles,
@@ -385,6 +395,7 @@ router.delete(
         });
       }
 
+      broadcastJobUpdate();
       res.json({ success: true, message: `Job "${jobTitle}" deleted` });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });
@@ -445,13 +456,14 @@ router.put(
 
       createNotification({
         type: 'JOB_UPDATED',
-        message: `Job "${updatedJob.title}" details have been updated`,
+        message: `Job "${updatedJob.title}" details have been updated by ${req.user.name}`,
         jobId: updatedJob._id,
         recipientIds: notifRecipientIds,
         recipientRoles: notifRoles,
         excludeUserId: req.user._id,
       });
 
+      broadcastJobUpdate();
       res.json({ success: true, data: result.data });
     } catch (error) {
       res.status(500).json({ success: false, error: error.message });

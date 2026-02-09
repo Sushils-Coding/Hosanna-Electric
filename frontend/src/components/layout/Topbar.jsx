@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, PanelLeftClose, PanelLeft, Trash2, Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { useNotification } from '../Notification';
 import api from '../../services/api';
 
 export default function Topbar({ sidebarCollapsed, onToggleSidebar, onMobileMenuToggle }) {
   const { user } = useAuth();
+  const socket = useSocket();
   const { showNotification } = useNotification();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -13,7 +15,7 @@ export default function Topbar({ sidebarCollapsed, onToggleSidebar, onMobileMenu
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const panelRef = useRef(null);
 
-  // Fetch unread count on mount + poll every 15s
+  // Fetch unread count on mount
   const fetchUnreadCount = useCallback(async () => {
     try {
       const { data } = await api.get('/notifications/unread-count');
@@ -25,9 +27,14 @@ export default function Topbar({ sidebarCollapsed, onToggleSidebar, onMobileMenu
 
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 15000);
-    return () => clearInterval(interval);
   }, [fetchUnreadCount]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handler = () => fetchUnreadCount();
+    socket.on('notification', handler);
+    return () => socket.off('notification', handler);
+  }, [socket, fetchUnreadCount]);
 
   // Fetch all notifications when panel opens
   const openPanel = async () => {
