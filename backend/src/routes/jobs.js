@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Job = require('../models/Job');
+const User = require('../models/User');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLES, JOB_STATUS } = require('../config/constants');
 const JobService = require('../services/JobService');
@@ -214,7 +215,7 @@ router.patch(
         notifRoles.push(ROLES.ADMIN);
       }
       if (req.body.status === JOB_STATUS.CONFIRMED) {
-        notifRoles.push(ROLES.ADMIN);
+        notifRoles.push(ROLES.ADMIN, ROLES.OFFICE_MANAGER);
       }
 
       createNotification({
@@ -313,6 +314,10 @@ router.patch(
       const oldTechName = job.assignedTechnician?.name || 'previous technician';
       const previousStatus = job.status;
 
+      // Fetch new technician's name
+      const newTech = await User.findById(req.body.technicianId).select('name');
+      const newTechName = newTech?.name || 'new technician';
+
       // Update job: new technician, reset status to ASSIGNED
       job.assignedTechnician = req.body.technicianId;
       job.status = JOB_STATUS.ASSIGNED;
@@ -320,15 +325,13 @@ router.patch(
         fromStatus: previousStatus,
         toStatus: JOB_STATUS.ASSIGNED,
         changedBy: req.user._id,
-        notes: req.body.notes || `Reassigned from ${oldTechName}`,
+        notes: req.body.notes || `Reassigned from ${oldTechName} to ${newTechName}`,
       });
       await job.save();
 
       // Re-populate for response
       await job.populate('assignedTechnician', 'name email');
       await job.populate('createdBy', 'name email');
-
-      const newTechName = job.assignedTechnician?.name || 'new technician';
 
       // Notify managers only — technician will be notified when dispatched
       createNotification({

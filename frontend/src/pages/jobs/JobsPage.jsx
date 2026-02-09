@@ -45,6 +45,7 @@ export default function JobsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [assignJob, setAssignJob] = useState(null);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [statusModalJobs, setStatusModalJobs] = useState(null);
 
   // ── Fetch jobs ──
   const fetchJobs = useCallback(async (page = 1) => {
@@ -78,6 +79,18 @@ export default function JobsPage() {
     socket.on('jobs:updated', handler);
     return () => socket.off('jobs:updated', handler);
   }, [socket, silentRefresh]);
+
+  // Prevent body scroll when status modal is open
+  useEffect(() => {
+    if (statusModalJobs) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [statusModalJobs]);
 
   // ── Client-side search filter ──
   const filteredJobs = searchTerm
@@ -130,7 +143,7 @@ export default function JobsPage() {
   for (let i = 0; i < firstDayOfWeek; i++) calendarDays.push(null); // blank cells
   for (let d = 1; d <= daysInMonth; d++) calendarDays.push(d);
 
-  // Map jobs to calendar dates
+  // Map jobs to calendar dates and group by status
   const jobsByDate = {};
   filteredJobs.forEach((j) => {
     if (!j.scheduledDate) return;
@@ -141,6 +154,16 @@ export default function JobsPage() {
       jobsByDate[day].push(j);
     }
   });
+
+  // Group jobs by status for each day
+  const groupJobsByStatus = (dayJobs) => {
+    const grouped = {};
+    dayJobs.forEach((j) => {
+      if (!grouped[j.status]) grouped[j.status] = [];
+      grouped[j.status].push(j);
+    });
+    return grouped;
+  };
 
   const today = new Date();
   const isToday = (day) =>
@@ -362,6 +385,7 @@ export default function JobsPage() {
             {calendarDays.map((day, idx) => {
               const dayJobs = day ? (jobsByDate[day] || []) : [];
               const todayCell = day && isToday(day);
+              const groupedByStatus = day ? groupJobsByStatus(dayJobs) : {};
 
               return (
                 <div
@@ -383,27 +407,37 @@ export default function JobsPage() {
                           {day}
                         </span>
                       </div>
-                      <div className="space-y-0.5 sm:space-y-1">
-                        {dayJobs.slice(0, window.innerWidth < 640 ? 1 : 3).map((j) => {
-                          const sc = STATUS_CONFIG[j.status];
-                          return (
-                            <button
-                              key={j._id}
-                              onClick={() => setSelectedJob(j)}
-                              className="w-full text-left px-1 sm:px-1.5 py-0.5 sm:py-1 rounded text-[9px] sm:text-[11px] font-medium truncate
-                                         cursor-pointer hover:opacity-80 transition-opacity"
-                              style={{ backgroundColor: sc.color + '20', color: sc.color }}
-                              title={j.title}
-                            >
-                              {j.title}
-                            </button>
-                          );
+                      <div className="space-y-0.5 sm:space-y-1 max-h-[calc(100%-2rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+                        {Object.entries(groupedByStatus).map(([status, jobs]) => {
+                          const sc = STATUS_CONFIG[status];
+                          if (jobs.length === 1) {
+                            return (
+                              <button
+                                key={jobs[0]._id}
+                                onClick={() => setSelectedJob(jobs[0])}
+                                className="w-full text-left px-1 sm:px-1.5 py-0.5 sm:py-1 rounded text-[9px] sm:text-[11px] font-medium truncate
+                                           cursor-pointer hover:opacity-80 transition-opacity"
+                                style={{ backgroundColor: sc.color + '20', color: sc.color }}
+                                title={jobs[0].title}
+                              >
+                                {jobs[0].title}
+                              </button>
+                            );
+                          } else {
+                            return (
+                              <button
+                                key={status}
+                                onClick={() => setStatusModalJobs({ status, jobs, date: `${monthName} ${day}` })}
+                                className="w-full text-left px-1 sm:px-1.5 py-0.5 sm:py-1 rounded text-[9px] sm:text-[11px] font-medium
+                                           cursor-pointer hover:opacity-80 transition-opacity"
+                                style={{ backgroundColor: sc.color + '20', color: sc.color }}
+                                title={`${jobs.length} ${sc.label} jobs`}
+                              >
+                                {jobs.length} {sc.label}
+                              </button>
+                            );
+                          }
                         })}
-                        {dayJobs.length > 3 && (
-                          <p className="text-[10px] text-hosanna-gray font-medium px-1">
-                            +{dayJobs.length - 3} more
-                          </p>
-                        )}
                       </div>
                     </>
                   )}
@@ -466,6 +500,48 @@ export default function JobsPage() {
           onAssignClick={(job) => { setSelectedJob(null); setAssignJob(job); }}
           onJobDeleted={handleJobDeleted}
         />
+      )}
+
+      {statusModalJobs && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200" 
+          onClick={() => setStatusModalJobs(null)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-200" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-hosanna-black">
+                {STATUS_CONFIG[statusModalJobs.status].label} Jobs
+              </h3>
+              <p className="text-sm text-hosanna-gray mt-1">{statusModalJobs.date}</p>
+            </div>
+            <div className="overflow-y-auto max-h-[calc(80vh-8rem)] overscroll-contain">
+              {statusModalJobs.jobs.map((j) => (
+                <button
+                  key={j._id}
+                  onClick={() => { setSelectedJob(j); setStatusModalJobs(null); }}
+                  className="w-full text-left px-6 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                >
+                  <p className="font-medium text-hosanna-black text-sm">{j.title}</p>
+                  <p className="text-xs text-hosanna-gray mt-1">{j.customerName}</p>
+                  {j.assignedTechnician && (
+                    <p className="text-xs text-hosanna-gray mt-0.5">Tech: {j.assignedTechnician.name}</p>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200">
+              <button
+                onClick={() => setStatusModalJobs(null)}
+                className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-hosanna-black rounded-lg transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
